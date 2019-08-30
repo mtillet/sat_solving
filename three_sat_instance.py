@@ -145,6 +145,13 @@ class ThreeSatInstance:
         z3_instance = convert_instance(self.clauses, self.nb_variables)
         return z3_instance.check() == z3.unsat
 
+    def get_ratio(self):
+        """
+        Compute the ratio nb of clauses / nb of variables
+        :return:
+        """
+        return len(self.clauses)/self.nb_variables
+
 
 def convert_instance(instance, nb_variables):
     """

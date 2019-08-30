@@ -5,24 +5,25 @@ completely.
 """
 
 from math import asin, sqrt, sin
+from scipy.stats import nbinom
+import numpy as np
+
+from sat_study import conc
 
 
 def u_i(a, n, i):
     """
-    Recursively compute the i-th iteration of the u serie.
-    :param a:
-    :param n:
-    :param i:
-    :return:
+    Recursively compute the i-th iteration of the u serie, defined by
+    u_1 = 1 - 2a/n
+    u_i = 2u_(i-1)**2 - 1
+
+    :return: u_i
     """
     if i == 1:
         return 1 - 2*a/n
 
     v = u_i(a, n, i-1)
     return 2*v**2 - 1
-
-
-# u_i(5, 8, 10)
 
 
 def p_failure_conditioned(a, n):
@@ -43,6 +44,58 @@ def p_failure_conditioned(a, n):
     return 1 - v
 
 
-# print(p_failure_conditionned(8, 5))
+def compute_failure_probability(instance, m):
+
+    ratio = instance.get_ratio()
+    nb_variables = instance.nb_variables
+    x = np.arange(0, 2**nb_variables + 1)
+
+    p, r = load_nbinom_params(ratio, nb_variables)
+
+    probabilities = nbinom.pmf(x, r, p)
+
+    partial_sum = 1 - probabilities[0]
+
+    for k in range(0, 2**nb_variables + 1):
+        theta_k = np.arcsin(sqrt(k/2**nb_variables))
+        probabilities[k] *= (np.cos(2*(m+1)*theta_k))**2
+
+    final_probability = sum(probabilities[1:])/partial_sum
+
+    return final_probability
+
+
+def load_nbinom_params(ratio, nb_variables):
+
+    if nb_variables == 16:
+        x, prob = conc(["p_16_0.1_1.01.npy", "p_16_2_6.1.npy", "p_16_6_9.1.npy"])
+        x = x[:-1]
+        prob = prob[:-1]
+
+        p = interpolate(ratio, x, prob)
+
+        x, r = conc(["r_16_1_7.1.npy"])
+        r = interpolate(ratio, x, r)
+
+        return p, r
+
+    pass
+
+
+def interpolate(ratio, x, prob):
+    i = 0
+    while i < len(x) and x[i] < ratio:
+        i += 1
+
+    if i == len(x) or i == 0:
+        return 1
+
+    w = (ratio - x[i-1]) / (x[i] - x[i-1])
+
+    p = prob[i-1] + (prob[i] - prob[i-1])*w
+
+    return p
+
+
 
 

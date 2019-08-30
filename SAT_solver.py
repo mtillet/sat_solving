@@ -1,12 +1,21 @@
 from itertools import combinations
 from math import ceil, sqrt, pi
 from qiskit import QuantumCircuit, ClassicalRegister, QuantumRegister, execute, BasicAer
+from qiskit.compiler.transpile import transpile
 
 # we use an implementation of the multi qubit controlled Toffoli gate more efficient than Aqua's mct, to gain some gates
-from SAT_solver.utils import cnx_o
+from utils import cnx_o, launch, plot_hist
 
 
 def add_3sat_clause(circ, qr, clause, index):
+    """
+    Add a clause of the regular 3SAT problem to the circuit.
+    :param circ: the circuit
+    :param qr: the quantum registers
+    :param clause: a clause of the SAT problem, using any number of variables (3 if 3SAT)
+    :param index: the index of the quantum register which will carry the result of the evaluation of the clause
+    :return:
+    """
     cont = [qr[abs(i)] for i in clause]
 
     # negates the qbits without NOT on the clause
@@ -25,8 +34,8 @@ def add_3sat_clause(circ, qr, clause, index):
 def add_clause_exclusive(circ, qr, clause, index):
     """
     Add a clause of the 1-exclusive SAT problem to the circuit
-    :param circ: circuit
-    :param qr: quantum registers
+    :param circ: the circuit
+    :param qr: the quantum registers
     :param clause: a clause of the SAT problem, using any number of variables
     :param index: the index of the quantum register which will carry the result of the evaluation of the clause
     :return:
@@ -174,9 +183,16 @@ def sat_solver(var_nb, clauses, backend=None):
         nb_grover = int(pi/4 * sqrt(2**(var_nb-i)))
 
         circ, _ = ex_1_3sat_circuit(var_nb, clauses, nb_grover=nb_grover, is_exclusive=False)
-        job = execute(circ, backend=backend, shots=1024, max_credits=3)
-        res = job.result().get_counts()
 
+        circ = transpile(circ, optimization_level=3, backend=backend)
+        print(circ.depth())
+        print(circ.count_ops())
+
+        # job = execute(circ, backend=backend, shots=1024, max_credits=3)
+        # res = job.result().get_counts()
+        res = launch(circ, backend_type=backend, verbose=True, shots=8000)
+        print(res)
+        plot_hist(res.get_result())
         # we take as result the most returned string bit
         most_probable = max(res, key=lambda x: res[x])[::-1]
         if evaluate(most_probable, clauses, is_exclusive=False):
@@ -247,6 +263,6 @@ def ex_1_3sat(var_nb, clauses, backend=None):
     return res
 
 
-clauses = [[1, 2, -3], [-1, -2, -3], [1, -2, 4], [2, -3, 4]]
+clauses = [[1, 2, -3], [-1, -2, -3], [1, 2, -3]]
 
-sat_solver(4, clauses)
+sat_solver(3, clauses, backend="q")

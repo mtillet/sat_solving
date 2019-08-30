@@ -26,7 +26,7 @@ from qiskit.aqua.utils.backend_utils import (get_backend_from_provider,
 from qiskit.ignis.mitigation.measurement import CompleteMeasFitter
 
 
-# IBMQ.load_accounts()
+#IBMQ.load_accounts()
 print("Account loaded")
 
 
